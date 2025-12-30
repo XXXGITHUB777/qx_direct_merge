@@ -1,0 +1,14 @@
+# hydirect.list (Turbo Edition)
+# 更新时间: 2025-12-30 19:13:37
+# 耗时: 46.36s
+# 规则总数: 9
+# 策略: 强制 DIRECT (直连)
+HOST-SUFFIX, 56che.com, direct
+HOST-SUFFIX, cainiao-inc.cn, direct
+HOST-SUFFIX, cainiao-inc.com, direct
+HOST-SUFFIX, cainiao-inc.net, direct
+HOST-SUFFIX, cainiao.com, direct
+HOST-SUFFIX, cainiao.com.cn, direct
+HOST-SUFFIX, cainiaoyizhan.com, direct
+HOST-SUFFIX, guoguo-app.com, direct
+HOST-SUFFIX, xiaog.xyz, direct
