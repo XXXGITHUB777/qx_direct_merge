@@ -1,12 +1,12 @@
 import requests
 import pytz
+import concurrent.futures
 from datetime import datetime
+import time
 
-# ================= 1. 经过全库匹配验证的映射表 =================
-#这是基于你239个App列表，与Blackmatrix7全库比对后生成的精准名单
-#已自动剔除 Pinterest/Tumblr 等必须走代理的App
-#已自动补全 蛋播星球依赖(直播源) 和 潜在办公需求(WPS/迅雷)
+# ================= 配置区域 =================
 
+# 你的定制化 App 映射表 (已去重、去毒、含依赖)
 MY_APP_MAP = {
     # --- 社交与通讯 ---
     '微信': 'WeChat',
@@ -18,49 +18,46 @@ MY_APP_MAP = {
     '豆瓣': 'DouBan',
     '知乎': 'Zhihu',
 
-    # --- 阿里系 (全家桶+单品) ---
+    # --- 阿里系 ---
     '支付宝': 'AliPay',
-    '阿里全家桶': 'Alibaba', # 涵盖淘宝/闲鱼/夸克/阿里云盘/优酷
-    # 脚本会自动去重，所以这里虽然有重叠，但能保证规则最全
+    '阿里全家桶': 'Alibaba', 
 
-    # --- 字节系 (全家桶+单品) ---
+    # --- 字节系 ---
     '抖音': 'DouYin',
-    '抖音极速版': 'DouYin',
-    '字节全家桶': 'ByteDance', # 涵盖头条/番茄/剪映/海螺/即梦AI
+    '字节全家桶': 'ByteDance', 
 
     # --- 购物与生活 ---
     '京东': 'JingDong',
     '拼多多': 'Pinduoduo',
-    '美团': 'MeiTuan', # 含猫眼
+    '美团': 'MeiTuan',
     '盒马': 'HeMa',
     '菜鸟': 'CaiNiao',
     '58同城': '58TongCheng',
 
-    # --- 视频与直播 (含蛋播依赖) ---
+    # --- 视频与直播 ---
     '哔哩哔哩': 'BiliBili',
     '快手': 'KuaiShou',
-    '斗鱼直播': 'Douyu', # 蛋播依赖
-    '虎牙直播': 'HuYa',  # 蛋播依赖
-    'YY直播': 'YYeTs',   # 蛋播依赖
+    '斗鱼直播': 'Douyu',
+    '虎牙直播': 'HuYa',
+    'YY直播': 'YYeTs',
 
     # --- 出行与地图 ---
     '高德地图': 'GaoDe',
-    '百度全家桶': 'Baidu', # 涵盖地图/网盘/贴吧/搜索
+    '百度全家桶': 'Baidu',
     '滴滴出行': 'DiDi',
-    '花小猪': 'DiDi',
     '携程旅行': 'XieCheng',
-    '同程旅行': 'TongCheng', # 含智行
+    '同程旅行': 'TongCheng',
     '航旅纵横': 'Umetrip',
 
-    # --- 工具/系统/潜在需求 ---
+    # --- 工具/系统 ---
     'Apple服务': 'Apple',
     'Apple硬件': 'AppleFirmware',
     'AppStore': 'AppStore',
     'iCloud': 'iCloud',
     'TestFlight': 'TestFlight',
     '爱思助手': 'AppleDev',
-    '微软服务': 'Microsoft', # OnePage/Office
-    '美图系列': 'MeiTu',     # 美图秀秀/Wink
+    '微软服务': 'Microsoft',
+    '美图系列': 'MeiTu',
     '讯飞输入法': 'iFlytek',
     '万能钥匙': 'WiFiMaster',
     'Speedtest': 'Speedtest',
@@ -72,117 +69,123 @@ MY_APP_MAP = {
     '中国联通': 'ChinaUnicom'
 }
 
-# ================= 2. 核心逻辑区域 =================
+# 基础链接模板
+BASE_URL = "https://ghproxy.net/https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/QuantumultX/{name}/{name}.list"
 
-def fetch_and_gen_rules():
-    # 核心去重字典：Key=规则指纹, Value=完整规则
-    unique_rules = {} 
-    
-    # 使用 ghproxy 加速下载，确保 GitHub Actions 不会连接超时
-    base_url_template = "https://ghproxy.net/https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/QuantumultX/{name}/{name}.list"
-    
+# ================= 逻辑区域 =================
+
+def download_single_rule(item):
+    """
+    下载单个规则的函数，用于多线程调用
+    """
+    remark, rule_name = item
+    url = BASE_URL.format(name=rule_name)
     headers = {'User-Agent': 'Quantumult%20X/1.0.30'}
     
-    print(f"--- 启动自动化构建 (目标源: {len(MY_APP_MAP)} 个) ---")
-    
-    success_sources = 0
-    
-    for remark, rule_name in MY_APP_MAP.items():
-        url = base_url_template.format(name=rule_name)
-        print(f"📥 正在抓取: {remark} ({rule_name}) ...", end="")
+    try:
+        # 设置 10秒 超时，防止卡死
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            return (rule_name, resp.text)
+        else:
+            print(f"   [❌ 失败] {remark}: HTTP {resp.status_code}")
+            return (rule_name, None)
+    except Exception as e:
+        print(f"   [⚠️ 超时/错误] {remark}: {e}")
+        return (rule_name, None)
+
+def process_rules(raw_text):
+    """
+    处理文本：提取规则、强制direct、去重
+    """
+    processed_rules = []
+    lines = raw_text.splitlines()
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith(('#', ';', '//')) or ',' not in line:
+            continue
         
-        try:
-            resp = requests.get(url, headers=headers, timeout=20)
-            if resp.status_code != 200:
-                print(f" [❌ 失败] HTTP {resp.status_code}")
-                continue
-
-            lines = resp.text.splitlines()
-            new_rules_count = 0
+        parts = [p.strip() for p in line.split(',')]
+        if len(parts) < 2: continue
+        
+        rule_type = parts[0].upper()
+        target = parts[1]
+        
+        if rule_type in ["HOST", "HOST-SUFFIX", "HOST-KEYWORD", "IP-CIDR", "IP-CIDR6", "USER-AGENT"]:
+            # 强制 Direct
+            final_rule = f"{rule_type}, {target}, direct"
+            # 生成指纹用于去重
+            fingerprint = f"{rule_type},{target}".lower()
+            processed_rules.append((fingerprint, final_rule))
             
-            for line in lines:
-                line = line.strip()
-                # 过滤注释和无效行
-                if not line or line.startswith(('#', ';', '//')): continue
-                if ',' not in line: continue
-                
-                parts = [p.strip() for p in line.split(',')]
-                if len(parts) < 2: continue
-                
-                rule_type = parts[0].upper()
-                target = parts[1]
-                
-                # 只保留有效的去广告/分流类型
-                if rule_type not in ["HOST", "HOST-SUFFIX", "HOST-KEYWORD", "IP-CIDR", "IP-CIDR6", "USER-AGENT"]:
-                    continue
-
-                # ==========================================
-                # 核心策略：强制 DIRECT + 自动去重
-                # ==========================================
-                
-                # 1. 强制策略为 direct
-                final_rule = f"{rule_type}, {target}, direct"
-                
-                # 2. 生成唯一指纹 (例如: "host,baidu.com")
-                fingerprint = f"{rule_type},{target}".lower()
-                
-                # 3. 字典去重：如果指纹已存在，通过字典特性自动忽略，实现去重
-                if fingerprint not in unique_rules:
-                    unique_rules[fingerprint] = final_rule
-                    new_rules_count += 1
-            
-            print(f" [✅ OK] 提取 {new_rules_count} 条")
-            success_sources += 1
-            
-        except Exception as e:
-            print(f" [⚠️ 出错] {e}")
-
-    # 转为列表
-    final_list = list(unique_rules.values())
-    
-    print(f"\n📊 统计报告:")
-    print(f"   - 成功抓取源: {success_sources} / {len(MY_APP_MAP)}")
-    print(f"   - 最终去重后规则数: {len(final_list)}")
-    
-    return final_list
-
-def sort_priority(line):
-    # 优化排序：HOST 放在前面，提高 QX 匹配效率
-    if line.startswith("HOST,"): return 1
-    if line.startswith("HOST-SUFFIX,"): return 2
-    if line.startswith("HOST-KEYWORD,"): return 3
-    return 10
+    return processed_rules
 
 def main():
-    rules = fetch_and_gen_rules()
+    print(f"🚀 启动多线程极速下载 (目标: {len(MY_APP_MAP)} 个规则集)...")
+    start_time = time.time()
     
-    if not rules:
-        print("❌ 严重错误：未生成任何规则，停止写入！")
+    unique_rules = {} # 去重字典
+    tasks = list(MY_APP_MAP.items())
+    
+    # === 多线程执行核心 ===
+    # max_workers=10 表示同时下载10个文件
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        # 提交所有任务
+        future_to_rule = {executor.submit(download_single_rule, item): item for item in tasks}
+        
+        # 处理结果
+        completed = 0
+        total = len(tasks)
+        
+        for future in concurrent.futures.as_completed(future_to_rule):
+            completed += 1
+            remark = future_to_rule[future][0]
+            try:
+                rule_name, content = future.result()
+                if content:
+                    # 解析规则
+                    rules_list = process_rules(content)
+                    count_before = len(unique_rules)
+                    
+                    for fp, rule in rules_list:
+                        if fp not in unique_rules:
+                            unique_rules[fp] = rule
+                            
+                    added = len(unique_rules) - count_before
+                    print(f"[{completed}/{total}] ✅ {remark} ({rule_name}) -> 新增 {added} 条")
+                else:
+                    print(f"[{completed}/{total}] ⚠️ {remark} 下载内容为空")
+            except Exception as exc:
+                print(f"[{completed}/{total}] 💥 {remark} 处理异常: {exc}")
+
+    # === 结果统计与写入 ===
+    sorted_rules = sorted(unique_rules.values(), key=lambda x: (x.split(',')[0], x.split(',')[1]))
+    
+    duration = time.time() - start_time
+    print(f"\n⏱️ 耗时: {duration:.2f} 秒")
+    print(f"📊 最终规则总数: {len(sorted_rules)}")
+    
+    if not sorted_rules:
+        print("❌ 错误：未生成任何规则！")
         exit(1)
 
-    # 排序
-    sorted_rules = sorted(rules, key=sort_priority)
-    
-    # 获取北京时间
     tz = pytz.timezone('Asia/Shanghai')
     now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
     
-    # 文件头注释
     header = [
-        f"# hydirect.list (Your Custom Direct List)",
+        f"# hydirect.list (Turbo Edition)",
         f"# 更新时间: {now}",
-        f"# 规则总数: {len(sorted_rules)} (已去重)",
-        f"# 适用场景: iPhone 11 极致省电 + 蛋播/WPS/直播兼容",
+        f"# 耗时: {duration:.2f}s",
+        f"# 规则总数: {len(sorted_rules)}",
         f"# 策略: 强制 DIRECT (直连)",
         ""
     ]
     
-    # 写入文件
     with open("hydirect.list", "w", encoding="utf-8") as f:
         f.write("\n".join(header))
         f.write("\n".join(sorted_rules))
         
-    print(f"\n🎉 文件生成成功: hydirect.list")
+    print(f"🎉 文件生成成功: hydirect.list")
 
 if __name__ == "__main__":
     main()
