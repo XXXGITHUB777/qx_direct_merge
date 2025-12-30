@@ -1,7 +1,6 @@
-# hydirect.list (JSON Local Mode)
-# 更新时间: 2025-12-30 19:22:22
-# 耗时: 1.73s
-# 规则总数: 8946
+# hydirect.list (CDN Auto Build)
+# 更新时间: 2025-12-30 19:25:51
+# 规则总数: 8965
 # 策略: 强制 DIRECT (直连)
 HOST, 0gr4uqmtt8y41hcjsgrzdrc31.ourdvsss.com, direct
 HOST, 0gr4uqmtt8y41hcjsgrzdrc3s.ourdvsss.com, direct
@@ -243,6 +242,7 @@ HOST, itunes.apple.com, direct
 HOST, itunesconnect.apple.com, direct
 HOST, js-cdn.music.apple.com, direct
 HOST, km.support.apple.com, direct
+HOST, lf3-static.bytednsdoc.com, direct
 HOST, lookup-api.apple.com, direct
 HOST, lookup-api.apple.com.edgekey.net, direct
 HOST, maps.apple.com, direct
@@ -365,6 +365,7 @@ HOST, upos-bstar-mirrorakam.akamaized.net, direct
 HOST, upos-bstar1-mirrorakam.akamaized.net, direct
 HOST, upp.itunes.apple.com, direct
 HOST, uts-api.itunes.apple.com, direct
+HOST, v5-dy-o-abtest.zjcdn.com, direct
 HOST, valid.apple.com, direct
 HOST, valid.origin-apple.com.akadns.net, direct
 HOST, vsmarketplacebadge.apphb.com, direct
@@ -1147,6 +1148,7 @@ HOST-SUFFIX, apple.co.th, direct
 HOST-SUFFIX, apple.co.uk, direct
 HOST-SUFFIX, apple.com, direct
 HOST-SUFFIX, apple.com.af, direct
+HOST-SUFFIX, apple.com.akadns.net, direct
 HOST-SUFFIX, apple.com.au, direct
 HOST-SUFFIX, apple.com.bo, direct
 HOST-SUFFIX, apple.com.br, direct
@@ -1421,6 +1423,8 @@ HOST-SUFFIX, applewatchedition.com, direct
 HOST-SUFFIX, applewatchseries3.net, direct
 HOST-SUFFIX, applewatchsport.com, direct
 HOST-SUFFIX, appleweb.net, direct
+HOST-SUFFIX, appleworldwidedeveloper.hb-api.omtrdc.net, direct
+HOST-SUFFIX, appleworldwidedeveloper.sc.omtrdc.net, direct
 HOST-SUFFIX, applexpo.net, direct
 HOST-SUFFIX, applezh.com, direct
 HOST-SUFFIX, applf.com, direct
@@ -2546,6 +2550,7 @@ HOST-SUFFIX, cosdnsresolve-wxzf.com, direct
 HOST-SUFFIX, cosdnsresolve.com, direct
 HOST-SUFFIX, cosmosdb.info, direct
 HOST-SUFFIX, cosmosdb.net, direct
+HOST-SUFFIX, courier-push-apple.com.akadns.net, direct
 HOST-SUFFIX, coz9uiesr5zv6.com, direct
 HOST-SUFFIX, cozdyez2ap.com, direct
 HOST-SUFFIX, cozydrdrebeats.com, direct
@@ -2735,11 +2740,15 @@ HOST-SUFFIX, desktopmovies.org, direct
 HOST-SUFFIX, detaliczny.com, direct
 HOST-SUFFIX, devcopilot.cn, direct
 HOST-SUFFIX, developer-advisor.com, direct
+HOST-SUFFIX, developer.apple.com, direct
+HOST-SUFFIX, developerservices2.apple.com, direct
 HOST-SUFFIX, developwechat.com, direct
 HOST-SUFFIX, developweixin.com, direct
 HOST-SUFFIX, device-manager.us, direct
+HOST-SUFFIX, devimages-cdn.apple.com, direct
 HOST-SUFFIX, devopsassessment.net, direct
 HOST-SUFFIX, devopsms.com, direct
+HOST-SUFFIX, devstreaming-cdn.apple.com, direct
 HOST-SUFFIX, devweixin.com, direct
 HOST-SUFFIX, dfig0.com, direct
 HOST-SUFFIX, dfkhgj.com, direct
@@ -4176,6 +4185,7 @@ HOST-SUFFIX, icloud-sandbox.com, direct
 HOST-SUFFIX, icloud.apple.com, direct
 HOST-SUFFIX, icloud.ch, direct
 HOST-SUFFIX, icloud.com, direct
+HOST-SUFFIX, icloud.com.akadns.net, direct
 HOST-SUFFIX, icloud.com.cn, direct
 HOST-SUFFIX, icloud.de, direct
 HOST-SUFFIX, icloud.ee, direct
@@ -4522,6 +4532,7 @@ HOST-SUFFIX, itun.es, direct
 HOST-SUFFIX, itunbes.com, direct
 HOST-SUFFIX, ituneas.com, direct
 HOST-SUFFIX, itunes-apple.cn, direct
+HOST-SUFFIX, itunes-apple.com.akadns.net, direct
 HOST-SUFFIX, itunes-radio.net, direct
 HOST-SUFFIX, itunes.ca, direct
 HOST-SUFFIX, itunes.co, direct
@@ -5721,6 +5732,8 @@ HOST-SUFFIX, nnjioko.com, direct
 HOST-SUFFIX, nohost.pro, direct
 HOST-SUFFIX, nokialumia.com.cn, direct
 HOST-SUFFIX, northgun.com, direct
+HOST-SUFFIX, notary-submissions-prod.s3-accelerate.amazonaws.com, direct
+HOST-SUFFIX, notary-submissions-prod.s3.us-west-2.amazonaws.com, direct
 HOST-SUFFIX, novelfm.com, direct
 HOST-SUFFIX, novelfmpic.com, direct
 HOST-SUFFIX, novelfmstatic.com, direct
@@ -5869,6 +5882,7 @@ HOST-SUFFIX, oywtv.com, direct
 HOST-SUFFIX, oyxdwx.com, direct
 HOST-SUFFIX, ozmvpbhc.com, direct
 HOST-SUFFIX, ozouckzr.com, direct
+HOST-SUFFIX, p-events-delivery.akamaized.net, direct
 HOST-SUFFIX, p-sig-dom.com, direct
 HOST-SUFFIX, p-sig-dom.net, direct
 HOST-SUFFIX, p0kc9ym05p.com, direct
@@ -5938,6 +5952,7 @@ HOST-SUFFIX, playbattleaces.com, direct
 HOST-SUFFIX, playcvn.com, direct
 HOST-SUFFIX, playfabapi.cn, direct
 HOST-SUFFIX, playfabcn.com, direct
+HOST-SUFFIX, playgrounds-cdn.apple.com, direct
 HOST-SUFFIX, plusrtc.com, direct
 HOST-SUFFIX, pn1waq.com, direct
 HOST-SUFFIX, po7ryumvkx34.com, direct
@@ -5996,6 +6011,7 @@ HOST-SUFFIX, pubgno1.cn, direct
 HOST-SUFFIX, pubgtool.com, direct
 HOST-SUFFIX, public-trust.com, direct
 HOST-SUFFIX, pullstring.net, direct
+HOST-SUFFIX, push-apple.com.akadns.net, direct
 HOST-SUFFIX, putdl.com, direct
 HOST-SUFFIX, pvacegurmbz3e.com, direct
 HOST-SUFFIX, pwabuilder.com, direct
@@ -6632,6 +6648,7 @@ HOST-SUFFIX, sneaker666.com, direct
 HOST-SUFFIX, sneakerpage.net, direct
 HOST-SUFFIX, sneakerskick.com, direct
 HOST-SUFFIX, snoba.net, direct
+HOST-SUFFIX, snssdk.com, direct
 HOST-SUFFIX, sofun.com, direct
 HOST-SUFFIX, sogou-compress.com, direct
 HOST-SUFFIX, sogou-diskmgr.com, direct
@@ -7491,6 +7508,7 @@ HOST-SUFFIX, tieyou.com, direct
 HOST-SUFFIX, timatrix.com.cn, direct
 HOST-SUFFIX, timedl.com, direct
 HOST-SUFFIX, timelinestoryteller.com, direct
+HOST-SUFFIX, timestamp.apple.com, direct
 HOST-SUFFIX, timibase.com, direct
 HOST-SUFFIX, timmerse.com, direct
 HOST-SUFFIX, tingbook.com, direct
