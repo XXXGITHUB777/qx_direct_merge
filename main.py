@@ -1,32 +1,31 @@
 import requests
 import pytz
-import json
-import os
 import concurrent.futures
 from datetime import datetime
 import time
 
 # ================= 配置区域 =================
 
-# 你的 APP 关键词列表 (左边是你的App名，右边是匹配规则的关键词)
-# 注意：右边的关键词必须是 Blackmatrix7 规则名的一部分
-MY_APPS = {
-    # --- 社交 ---
+# 1. 修正后的映射表 (修复了 QQ 和 航旅纵横)
+MY_APP_MAP = {
+    # --- 社交与通讯 ---
     '微信': 'WeChat',
-    'QQ': 'TencentQQ',
+    'QQ': 'TencentQQ',          # 如果这个还报错，下面的 Tencent 全家桶会兜底
+    '腾讯全家桶': 'Tencent',     # 包含 QQ/微信/元宝 等所有腾讯系
     '微博': 'Weibo',
     '小红书': 'XiaoHongShu',
     '豆瓣': 'DouBan',
     '知乎': 'Zhihu',
 
-    # --- 全家桶 ---
+    # --- 阿里系 ---
     '支付宝': 'AliPay',
-    '阿里全家桶': 'Alibaba',
-    '腾讯全家桶': 'Tencent',
-    '字节全家桶': 'ByteDance',
-    '百度全家桶': 'Baidu',
+    '阿里全家桶': 'Alibaba',     # 包含 淘宝/闲鱼/夸克/阿里云盘/优酷
 
-    # --- 购物 ---
+    # --- 字节系 ---
+    '抖音': 'DouYin',
+    '字节全家桶': 'ByteDance',   # 包含 头条/番茄/剪映/海螺/即梦AI
+
+    # --- 购物与生活 ---
     '京东': 'JingDong',
     '拼多多': 'Pinduoduo',
     '美团': 'MeiTuan',
@@ -34,82 +33,67 @@ MY_APPS = {
     '菜鸟': 'CaiNiao',
     '58同城': '58TongCheng',
 
-    # --- 视频 ---
+    # --- 视频与直播 ---
     '哔哩哔哩': 'BiliBili',
     '快手': 'KuaiShou',
-    '斗鱼': 'Douyu',
-    '虎牙': 'HuYa',
-    'YY': 'YYeTs',
+    '斗鱼直播': 'Douyu',
+    '虎牙直播': 'HuYa',
+    'YY直播': 'YYeTs',
 
-    # --- 出行 ---
-    '高德': 'GaoDe',
-    '滴滴': 'DiDi',
-    '携程': 'XieCheng',
-    '同程': 'TongCheng',
-    '航旅纵横': 'Umetrip',
+    # --- 出行与地图 ---
+    '高德地图': 'GaoDe',
+    '百度全家桶': 'Baidu',
+    '滴滴出行': 'DiDi',
+    '携程旅行': 'XieCheng',
+    '同程旅行': 'TongCheng',
+    '航旅纵横': 'HangLvZongHeng', # 修正：原来叫 Umetrip，现在改用拼音匹配
 
-    # --- 工具 ---
-    'Apple': 'Apple',
+    # --- 工具/系统 ---
+    'Apple服务': 'Apple',
+    'Apple硬件': 'AppleFirmware', # 修正：AppleFirmware 有时会归入 Apple，保留无妨
     'AppStore': 'AppStore',
     'iCloud': 'iCloud',
-    'Microsoft': 'Microsoft',
-    'WPS': 'Kingsoft',
-    '迅雷': 'Xunlei',
-    '美图': 'MeiTu',
+    'TestFlight': 'TestFlight',
+    '爱思助手': 'AppleDev',
+    '微软服务': 'Microsoft',
+    '美图系列': 'MeiTu',
+    '讯飞输入法': 'iFlytek',
     '万能钥匙': 'WiFiMaster',
     'Speedtest': 'Speedtest',
-    '迅飞': 'iFlytek',
+    'WPS办公': 'Kingsoft',
+    '迅雷下载': 'Xunlei',
 
     # --- 运营商 ---
-    '电信': 'ChinaTelecom',
-    '联通': 'ChinaUnicom'
+    '中国电信': 'ChinaTelecom',
+    '中国联通': 'ChinaUnicom'
 }
+
+# 2. 核心修改：使用 jsDelivr CDN (极速、稳定、不需翻墙)
+BASE_URL = "https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/QuantumultX/{name}/{name}.list"
 
 # ================= 逻辑区域 =================
 
-def load_rules_json():
-    """读取 rules.json 文件"""
-    if not os.path.exists('rules.json'):
-        print("❌ 错误：未找到 rules.json 文件！请先运行油猴脚本提取链接。")
-        return None
-    
-    with open('rules.json', 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-def get_download_url(keyword, rules_dict):
-    """根据关键词在 JSON 中查找对应的 URL"""
-    # 精确匹配优先
-    if keyword in rules_dict:
-        return keyword, rules_dict[keyword]
-    
-    # 模糊匹配 (比如 keyword='WeChat' 能匹配到 'WeChat')
-    for name, url in rules_dict.items():
-        if keyword.lower() == name.lower():
-            return name, url
-            
-    return None, None
-
-def download_rule(task):
-    """下载单个规则"""
-    app_name, rule_name, url = task
+def download_single_rule(item):
+    remark, rule_name = item
+    url = BASE_URL.format(name=rule_name)
     headers = {'User-Agent': 'Quantumult%20X/1.0.30'}
     
     try:
-        # 使用 10秒 超时
-        resp = requests.get(url, headers=headers, timeout=10)
+        # CDN 速度很快，5秒超时足够
+        resp = requests.get(url, headers=headers, timeout=5)
         if resp.status_code == 200:
-            return (app_name, rule_name, resp.text)
+            return (rule_name, resp.text)
         else:
-            print(f"   [❌ 失败] {app_name}: HTTP {resp.status_code}")
-            return None
+            # 如果是404，说明规则名可能变了
+            print(f"   [❌ 404] {remark}: 规则名可能错误 ({rule_name})")
+            return (rule_name, None)
     except Exception as e:
-        print(f"   [⚠️ 超时] {app_name}: {e}")
-        return None
+        print(f"   [⚠️ 超时] {remark}: {e}")
+        return (rule_name, None)
 
-def process_content(content):
-    """提取规则并强制 Direct"""
-    processed = []
-    lines = content.splitlines()
+def process_rules(raw_text):
+    processed_rules = []
+    lines = raw_text.splitlines()
     for line in lines:
         line = line.strip()
         if not line or line.startswith(('#', ';', '//')) or ',' not in line:
@@ -122,63 +106,64 @@ def process_content(content):
         target = parts[1]
         
         if rule_type in ["HOST", "HOST-SUFFIX", "HOST-KEYWORD", "IP-CIDR", "IP-CIDR6", "USER-AGENT"]:
+            # 强制 Direct
             final_rule = f"{rule_type}, {target}, direct"
             fingerprint = f"{rule_type},{target}".lower()
-            processed.append((fingerprint, final_rule))
+            processed_rules.append((fingerprint, final_rule))
             
-    return processed
+    return processed_rules
 
 def main():
-    # 1. 加载本地 JSON
-    rules_dict = load_rules_json()
-    if not rules_dict: return
-
-    # 2. 构建任务列表
-    tasks = []
-    print(f"🔍 正在匹配链接 (共 {len(MY_APPS)} 个目标)...")
-    
-    for app_name, keyword in MY_APPS.items():
-        rule_name, url = get_download_url(keyword, rules_dict)
-        if url:
-            tasks.append((app_name, rule_name, url))
-        else:
-            print(f"   [⚠️ 未找到] {app_name} (关键词: {keyword}) - 请检查 JSON")
-
-    print(f"\n🚀 启动多线程下载 (任务数: {len(tasks)})...")
-    
-    unique_rules = {}
+    print(f"🚀 启动 GitHub Action 自动构建 (CDN模式)...")
     start_time = time.time()
     
-    # 3. 多线程下载
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(download_rule, task) for task in tasks]
-        
-        for future in concurrent.futures.as_completed(futures):
-            result = future.result()
-            if result:
-                app_name, rule_name, content = result
-                
-                # 处理内容
-                extracted = process_content(content)
-                count_new = 0
-                for fp, rule in extracted:
-                    if fp not in unique_rules:
-                        unique_rules[fp] = rule
-                        count_new += 1
-                
-                print(f"   [✅ OK] {app_name} ({rule_name}) -> 新增 {count_new} 条")
-
-    # 4. 生成文件
-    sorted_rules = sorted(unique_rules.values(), key=lambda x: (x.split(',')[0], x.split(',')[1]))
-    duration = time.time() - start_time
+    unique_rules = {} 
+    tasks = list(MY_APP_MAP.items())
     
+    # 多线程下载
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_rule = {executor.submit(download_single_rule, item): item for item in tasks}
+        
+        completed = 0
+        total = len(tasks)
+        
+        for future in concurrent.futures.as_completed(future_to_rule):
+            completed += 1
+            remark = future_to_rule[future][0]
+            try:
+                rule_name, content = future.result()
+                if content:
+                    rules_list = process_rules(content)
+                    count_before = len(unique_rules)
+                    
+                    for fp, rule in rules_list:
+                        if fp not in unique_rules:
+                            unique_rules[fp] = rule
+                            
+                    added = len(unique_rules) - count_before
+                    print(f"[{completed}/{total}] ✅ {remark} -> 新增 {added} 条")
+                else:
+                    pass # 错误信息已在下载函数中打印
+            except Exception as exc:
+                print(f"[{completed}/{total}] 💥 {remark} 异常: {exc}")
+
+    # 排序与写入
+    sorted_rules = sorted(unique_rules.values(), key=lambda x: (x.split(',')[0], x.split(',')[1]))
+    
+    duration = time.time() - start_time
+    print(f"\n⏱️ 耗时: {duration:.2f} 秒")
+    print(f"📊 规则总数: {len(sorted_rules)}")
+    
+    if not sorted_rules:
+        print("❌ 错误：未生成任何规则！")
+        exit(1)
+
     tz = pytz.timezone('Asia/Shanghai')
     now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
     
     header = [
-        f"# hydirect.list (JSON Local Mode)",
+        f"# hydirect.list (CDN Auto Build)",
         f"# 更新时间: {now}",
-        f"# 耗时: {duration:.2f}s",
         f"# 规则总数: {len(sorted_rules)}",
         f"# 策略: 强制 DIRECT (直连)",
         ""
@@ -188,7 +173,7 @@ def main():
         f.write("\n".join(header))
         f.write("\n".join(sorted_rules))
         
-    print(f"\n🎉 成功！已生成 hydirect.list，共 {len(sorted_rules)} 条规则。")
+    print(f"🎉 文件生成成功: hydirect.list")
 
 if __name__ == "__main__":
     main()
